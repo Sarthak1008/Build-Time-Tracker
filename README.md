@@ -1,6 +1,6 @@
 # Build-Time-Tracker
 
-An advanced Maven plugin that tracks and analyzes build times with comprehensive analytics, bottleneck detection, and performance monitoring.
+An advanced Maven plugin that tracks and analyzes build times with comprehensive analytics, bottleneck detection, performance monitoring, and enhanced report generation capabilities.
 
 ## Features
 
@@ -9,6 +9,7 @@ An advanced Maven plugin that tracks and analyzes build times with comprehensive
 - **Phase-wise Duration Tracking**: Detailed timing for each Maven lifecycle phase
 - **Colored Console Output**: Visual indicators for fast, normal, and slow phases
 - **JSON/CSV Export**: Export timing data in multiple formats
+- **PDF/Excel Reports**: Professional-grade reports with detailed analytics and formatting
 - **HTML Dashboard**: Beautiful interactive dashboard with charts and analytics
 
 ### Advanced Analytics
@@ -37,7 +38,7 @@ Add the following to your `pom.xml`:
 <plugin>
 	<groupId>io.github.sarthak1008</groupId>
 	<artifactId>build-time-tracker</artifactId>
-	<version>1.0.8</version>
+	<version>1.1.0</version>
 	<executions>
 		<execution>
 			<goals>
@@ -56,7 +57,7 @@ You can configure the plugin with the following options:
 <plugin>
 	<groupId>io.github.sarthak1008</groupId>
 	<artifactId>build-time-tracker</artifactId>
-	<version>1.0.8</version>
+	<version>1.1.0</version>
 	<executions>
 		<execution>
 			<goals>
@@ -88,6 +89,10 @@ You can configure the plugin with the following options:
 		<maxWarningsToShow>50</maxWarningsToShow>                 <!-- Max warnings in reports -->
 		<enableFailureLineDetection>true</enableFailureLineDetection> <!-- Show source context -->
 		<sourceCodeContext>3</sourceCodeContext>                  <!-- Lines of context around issues -->
+		
+		<!-- Dark Mode & UI -->
+		<enableDarkMode>auto</enableDarkMode>                      <!-- Dark mode: auto, light, dark -->
+		<darkModeConsole>true</darkModeConsole>                    <!-- Enable dark mode for console -->
 		
 		<!-- History Management -->
 		<historyFile>${project.build.directory}/build-history.json</historyFile>
@@ -241,6 +246,54 @@ The plugin maintains a build history file (`build-history.json`) that enables:
 | `maxWarningsToShow` | 50 | Maximum number of warnings to display |
 | `enableFailureLineDetection` | true | Show source code context for failures |
 | `sourceCodeContext` | 3 | Number of lines to show around issues |
+| `enableDarkMode` | auto | Dark mode setting: auto, light, dark |
+| `darkModeConsole` | true | Enable dark mode colors for console output |
+
+## Dark Mode Support
+
+The Build Time Tracker now includes comprehensive dark mode support for better visibility in dark terminals and IDEs.
+
+### Features
+
+- **🌙 Auto Detection**: Automatically detects dark mode based on your environment
+- **🎨 Enhanced Colors**: Brighter colors optimized for dark backgrounds
+- **⚙️ Manual Control**: Force light or dark mode regardless of system settings
+- **🖥️ IDE Integration**: Optimized for popular IDEs like VS Code, IntelliJ IDEA, Eclipse
+
+### Configuration Options
+
+```xml
+<!-- Auto-detect based on environment (recommended) -->
+<enableDarkMode>auto</enableDarkMode>
+
+<!-- Force dark mode -->
+<enableDarkMode>dark</enableDarkMode>
+
+<!-- Force light mode -->
+<enableDarkMode>light</enableDarkMode>
+
+<!-- Enable/disable dark mode colors for console -->
+<darkModeConsole>true</darkModeConsole>
+```
+
+### Auto-Detection
+
+The plugin automatically detects dark mode by checking:
+
+- **VS Code**: Detects VS Code integrated terminal
+- **Windows Terminal**: Identifies Windows Terminal sessions
+- **IDEs**: Recognizes IntelliJ IDEA, Eclipse, NetBeans environments
+- **Environment Variables**: Checks `TERM_PROGRAM`, `WT_SESSION`, and other indicators
+
+### Dark Mode Colors
+
+When dark mode is enabled, the plugin uses enhanced colors for better visibility:
+
+- **🟢 Success**: Bright green instead of standard green
+- **🟡 Warnings**: Bright yellow instead of standard yellow  
+- **🔴 Errors**: Bright red instead of standard red
+- **🔵 Info**: Bright blue instead of standard blue
+- **🟣 Analytics**: Bright magenta instead of standard purple
 
 ## Performance Tips
 
@@ -287,6 +340,14 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Changelog
 
+### Version 1.1.0
+- **📊 Enhanced Report Export**: Improved PDF and Excel report generation with better formatting
+- **🔧 Bug Fixes**: Fixed Cell class conflicts between Apache POI and iText libraries
+- **📈 Stability Improvements**: Enhanced error handling and report generation reliability
+- **🎨 UI Enhancements**: Better visual formatting in exported reports
+- **⚡ Performance Optimizations**: Improved memory usage during report generation
+- **🔍 Code Quality**: Resolved import conflicts and improved code maintainability
+
 ### Version 1.0.8
 - **🔍 Warning Detection & Code Analysis**: Comprehensive warning detection system
 - **⚠️ Unused Code Detection**: Identifies unused variables, imports, and suppressed warnings
@@ -296,12 +357,13 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **📋 Enhanced Reporting**: Detailed HTML and console reports for warnings and failures
 - **🔧 Failure Analysis**: Advanced failure detection with source code context
 - **📈 Improved Analytics**: Integrated warning analysis into performance reports
+- **🌙 Dark Mode Support**: Auto-detection and enhanced colors for dark terminals and IDEs
+- **🎨 Theme-Aware Colors**: Optimized color schemes for both light and dark environments
 
 ### Version 1.0.5
 - Added advanced analytics engine with bottleneck analysis
 - Implemented system resource monitoring (CPU/Memory)
 - Added regression detection with build history tracking
-- Introduced build efficiency scoring system
 - Created interactive HTML dashboard with charts
 - Enhanced console output with colored indicators
 - Added smart optimization recommendations

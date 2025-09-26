@@ -91,6 +91,12 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
     @Parameter(property = "enableCodeQualityChecks", defaultValue = "true")
     private boolean enableCodeQualityChecks;
 
+    @Parameter(property = "enablePdfExport", defaultValue = "true")
+    private boolean enablePdfExport;
+
+    @Parameter(property = "enableExcelExport", defaultValue = "true")
+    private boolean enableExcelExport;
+
     // Parameters - put in your @Mojo (main plugin) class with existing fields
     @Parameter(property = "enableFailureLineDetection", defaultValue = "true")
     private boolean enableFailureLineDetection;
@@ -688,6 +694,70 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
         if (!buildWarnings.isEmpty()) {
             generateWarningsReport();
         }
+
+        // Generate PDF and Excel exports
+        generateExportReports(currentBuild);
+    }
+
+    private void generateExportReports(BuildMetrics currentBuild) {
+        if (!enablePdfExport && !enableExcelExport) {
+            return;
+        }
+
+        if (!outputDirectory.exists()) {
+            outputDirectory.mkdirs();
+        }
+
+        ReportExporter exporter = new ReportExporter(outputDirectory, project.getName());
+        
+        try {
+            // Calculate analytics data for exports
+            BottleneckReport bottleneckReport = bottleneckAnalyzer.analyze(currentBuild.phaseTimes);
+            RegressionReport regressionReport = regressionDetector.detectRegression(currentBuild, regressionThreshold);
+            EfficiencyScore efficiencyScore = efficiencyScorer.calculateScore(currentBuild, buildHistory);
+
+            // Export dashboard reports
+            if (enablePdfExport) {
+                File pdfFile = exporter.exportDashboardToPdf(currentBuild, bottleneckReport, 
+                                                           regressionReport, efficiencyScore);
+                logInfo("📄 PDF dashboard exported: " + pdfFile.getAbsolutePath());
+            }
+
+            if (enableExcelExport) {
+                File excelFile = exporter.exportDashboardToExcel(currentBuild, bottleneckReport, 
+                                                               regressionReport, efficiencyScore);
+                logInfo("📊 Excel dashboard exported: " + excelFile.getAbsolutePath());
+            }
+
+            // Export warnings reports if there are warnings
+            if (!buildWarnings.isEmpty()) {
+                if (enablePdfExport) {
+                    File warningsPdf = exporter.exportWarningsToPdf(buildWarnings);
+                    logInfo("📄 PDF warnings report exported: " + warningsPdf.getAbsolutePath());
+                }
+
+                if (enableExcelExport) {
+                    File warningsExcel = exporter.exportWarningsToExcel(buildWarnings);
+                    logInfo("📊 Excel warnings report exported: " + warningsExcel.getAbsolutePath());
+                }
+            }
+
+            // Export failures reports if there are failures
+            if (!buildFailures.isEmpty()) {
+                if (enablePdfExport) {
+                    File failuresPdf = exporter.exportFailuresToPdf(buildFailures);
+                    logInfo("📄 PDF failures report exported: " + failuresPdf.getAbsolutePath());
+                }
+
+                if (enableExcelExport) {
+                    File failuresExcel = exporter.exportFailuresToExcel(buildFailures);
+                    logInfo("📊 Excel failures report exported: " + failuresExcel.getAbsolutePath());
+                }
+            }
+
+        } catch (IOException e) {
+            getLog().error("Failed to generate export reports: " + e.getMessage(), e);
+        }
     }
 
     // ========== ENHANCED HTML DASHBOARD GENERATION ==========
@@ -744,6 +814,12 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
                 .append("        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background: #f8f9fa; }\n")
                 .append("        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n")
                 .append("        .header { background: #dc3545; color: white; padding: 20px; border-radius: 6px; margin-bottom: 20px; }\n")
+                .append("        .header-content { display: flex; justify-content: space-between; align-items: center; }\n")
+                .append("        .header-text { text-align: left; }\n")
+                .append("        .download-buttons { display: flex; gap: 10px; }\n")
+                .append("        .download-btn { padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: 600; }\n")
+                .append("        .pdf-btn { background: #6c757d; color: white; }\n")
+                .append("        .excel-btn { background: #28a745; color: white; }\n")
                 .append("        .failure-card { border: 1px solid #dee2e6; border-radius: 6px; padding: 20px; margin-bottom: 20px; }\n")
                 .append("        .source-code { background: #f8f9fa; padding: 15px; border-radius: 4px; font-family: monospace; white-space: pre; overflow-x: auto; }\n")
                 .append("        .fixes { background: #e8f4f8; padding: 15px; border-radius: 4px; margin-top: 10px; }\n")
@@ -753,8 +829,27 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
                 .append("<body>\n")
                 .append("    <div class='container'>\n")
                 .append("        <div class='header'>\n")
-                .append("            <h1>🔥 Build Failures Report</h1>\n")
-                .append("            <p>Total Failures: ").append(buildFailures.size()).append("</p>\n")
+                .append("            <div class='header-content'>\n")
+                .append("                <div class='header-text'>\n")
+                .append("                    <h1>🔥 Build Failures Report</h1>\n")
+                .append("                    <p>Total Failures: ").append(buildFailures.size()).append("</p>\n")
+                .append("                </div>\n")
+                .append("                <div class='download-buttons'>\n");
+        
+        if (enablePdfExport) {
+            html.append("                    <a href='build-failures.pdf' class='download-btn pdf-btn' download>\n")
+                .append("                        📄 Download PDF\n")
+                .append("                    </a>\n");
+        }
+        
+        if (enableExcelExport) {
+            html.append("                    <a href='build-failures.xlsx' class='download-btn excel-btn' download>\n")
+                .append("                        📊 Download Excel\n")
+                .append("                    </a>\n");
+        }
+        
+        html.append("                </div>\n")
+                .append("            </div>\n")
                 .append("        </div>\n");
 
         // Generate failure cards
@@ -809,6 +904,12 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
                 .append("        body { font-family: -apple-system, system-ui, sans-serif; line-height: 1.6; margin: 0; padding: 20px; background: #f8f9fa; }\n")
                 .append("        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }\n")
                 .append("        .header { background: #ffc107; color: #333; padding: 20px; border-radius: 6px; margin-bottom: 20px; }\n")
+                .append("        .header-content { display: flex; justify-content: space-between; align-items: center; }\n")
+                .append("        .header-text { text-align: left; }\n")
+                .append("        .download-buttons { display: flex; gap: 10px; }\n")
+                .append("        .download-btn { padding: 8px 16px; border-radius: 4px; text-decoration: none; font-weight: 600; }\n")
+                .append("        .pdf-btn { background: #dc3545; color: white; }\n")
+                .append("        .excel-btn { background: #28a745; color: white; }\n")
                 .append("        .warning-group { margin-bottom: 30px; }\n")
                 .append("        .warning-type { background: #f8f9fa; padding: 10px; border-radius: 4px; margin-bottom: 10px; }\n")
                 .append("        .warning-item { border: 1px solid #dee2e6; border-radius: 4px; padding: 15px; margin-bottom: 10px; }\n")
@@ -820,8 +921,27 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
                 .append("<body>\n")
                 .append("    <div class='container'>\n")
                 .append("        <div class='header'>\n")
-                .append("            <h1>⚠️ Build Warnings Report</h1>\n")
-                .append("            <p>Total Warnings: ").append(buildWarnings.size()).append("</p>\n")
+                .append("            <div class='header-content'>\n")
+                .append("                <div class='header-text'>\n")
+                .append("                    <h1>⚠️ Build Warnings Report</h1>\n")
+                .append("                    <p>Total Warnings: ").append(buildWarnings.size()).append("</p>\n")
+                .append("                </div>\n")
+                .append("                <div class='download-buttons'>\n");
+        
+        if (enablePdfExport) {
+            html.append("                    <a href='build-warnings.pdf' class='download-btn pdf-btn' download>\n")
+                .append("                        📄 Download PDF\n")
+                .append("                    </a>\n");
+        }
+        
+        if (enableExcelExport) {
+            html.append("                    <a href='build-warnings.xlsx' class='download-btn excel-btn' download>\n")
+                .append("                        📊 Download Excel\n")
+                .append("                    </a>\n");
+        }
+        
+        html.append("                </div>\n")
+                .append("            </div>\n")
                 .append("        </div>\n");
 
         // Group warnings by type
@@ -976,6 +1096,15 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
                 "        .recommendation-item { margin: 8px 0; color: #495057; display: flex; align-items: flex-start; gap: 8px; }\n"
                 +
                 "        .recommendation-item::before { content: '•'; color: #17a2b8; font-weight: bold; }\n" +
+                "        \n" +
+                "        /* Download Buttons */\n" +
+                "        .header-content { display: flex; justify-content: space-between; align-items: center; }\n" +
+                "        .header-text { text-align: left; }\n" +
+                "        .download-buttons { display: flex; gap: 10px; }\n" +
+                "        .download-btn { padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; transition: all 0.2s; }\n" +
+                "        .pdf-btn { background: #dc3545; color: white; }\n" +
+                "        .excel-btn { background: #28a745; color: white; }\n" +
+                "        .download-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.2); }\n" +
                 "    </style>\n" +
                 "</head>\n" +
                 "<body>\n" +
@@ -983,11 +1112,34 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
     }
 
     private String generateDashboardHeader(BuildMetrics currentBuild) {
-        return "        <div class='dashboard-header'>\n" +
-                "            <h1>🚀 Build Time Dashboard</h1>\n" +
-                "            <p>Project: " + project.getName() + " | Generated: " +
-                currentBuild.timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")) + "</p>\n" +
-                "        </div>\n";
+        StringBuilder header = new StringBuilder();
+        header.append("        <div class='dashboard-header'>\n")
+              .append("            <div class='header-content'>\n")
+              .append("                <div class='header-text'>\n")
+              .append("                    <h1>🚀 Build Time Dashboard</h1>\n")
+              .append("                    <p>Project: ").append(project.getName()).append(" | Generated: ")
+              .append(currentBuild.timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")))
+              .append("</p>\n")
+              .append("                </div>\n")
+              .append("                <div class='download-buttons'>\n");
+        
+        if (enablePdfExport) {
+            header.append("                    <a href='build-dashboard.pdf' class='download-btn pdf-btn' download>\n")
+                  .append("                        📄 Download PDF\n")
+                  .append("                    </a>\n");
+        }
+        
+        if (enableExcelExport) {
+            header.append("                    <a href='build-dashboard.xlsx' class='download-btn excel-btn' download>\n")
+                  .append("                        📊 Download Excel\n")
+                  .append("                    </a>\n");
+        }
+        
+        header.append("                </div>\n")
+              .append("            </div>\n")
+              .append("        </div>\n");
+        
+        return header.toString();
     }
 
     private String generateMetricsCards(BuildMetrics currentBuild) {
@@ -1307,418 +1459,11 @@ public class BuildTimeTrackerMojo extends AbstractMojo {
     }
 
     // ========== ANALYTICS CLASSES ==========
+    // External classes are used for analytics
 
-    /**
-     * Analyzes build phases to identify bottlenecks and optimization opportunities.
-     */
-    private class BottleneckAnalyzer {
-        public BottleneckReport analyze(Map<String, Long> phaseTimes) {
-            if (phaseTimes.isEmpty()) {
-                return new BottleneckReport();
-            }
-
-            long totalTime = phaseTimes.values().stream().mapToLong(Long::longValue).sum();
-
-            List<BottleneckReport.PhaseAnalysis> phases = phaseTimes.entrySet().stream()
-                    .filter(e -> !e.getKey().equals("total"))
-                    .map(e -> new BottleneckReport.PhaseAnalysis(
-                            e.getKey(),
-                            e.getValue(),
-                            (e.getValue() * 100.0) / totalTime))
-                    .sorted((a, b) -> Long.compare(b.duration, a.duration))
-                    .collect(Collectors.toList());
-
-            BottleneckReport report = new BottleneckReport();
-            if (!phases.isEmpty()) {
-                BottleneckReport.PhaseAnalysis primary = phases.get(0);
-                report.primaryBottleneck = primary.phaseName;
-                report.primaryBottleneckTime = primary.duration;
-                report.primaryBottleneckPercentage = primary.percentage;
-                report.topPhases = phases;
-
-                // Generate recommendations
-                if (primary.percentage > 40) {
-                    report.recommendations
-                            .add("Focus optimization on '" + primary.phaseName + "' phase (major bottleneck)");
-                }
-                if (phases.size() > 3 && phases.get(2).percentage > 15) {
-                    report.recommendations.add("Consider parallel execution for top 3 phases");
-                }
-                if (primary.phaseName.contains("compile")) {
-                    report.recommendations.add("Consider incremental compilation or compiler daemon");
-                }
-                if (primary.phaseName.contains("test")) {
-                    report.recommendations.add("Optimize test execution with parallel runners or test selection");
-                }
-            }
-
-            return report;
-        }
-    }
-
-    /**
-     * Monitors system resources during build execution.
-     */
-    private class SystemMonitor {
-        private ScheduledExecutorService scheduler;
-        private final List<SystemSample> samples = new ArrayList<>();
-        private final MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
-        private final OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory
-                .getOperatingSystemMXBean();
-
-        public void startMonitoring() {
-            if (!enableSystemMonitoring)
-                return;
-
-            scheduler = Executors.newSingleThreadScheduledExecutor();
-            scheduler.scheduleAtFixedRate(this::takeSample, 0, monitoringIntervalMs, TimeUnit.MILLISECONDS);
-        }
-
-        public SystemMetrics stopMonitoring() {
-            if (scheduler != null) {
-                scheduler.shutdown();
-            }
-
-            if (samples.isEmpty()) {
-                return new SystemMetrics();
-            }
-
-            long avgMemory = (long) samples.stream().mapToLong(s -> s.memoryUsed).average().orElse(0);
-            long peakMemory = samples.stream().mapToLong(s -> s.memoryUsed).max().orElse(0);
-            double avgCpu = samples.stream().mapToDouble(s -> s.cpuUsage).average().orElse(0);
-            double peakCpu = samples.stream().mapToDouble(s -> s.cpuUsage).max().orElse(0);
-
-            return new SystemMetrics(avgMemory, peakMemory, avgCpu, peakCpu, 0, 0);
-        }
-
-        private void takeSample() {
-            long memoryUsed = memoryBean.getHeapMemoryUsage().getUsed();
-            double cpuUsage = osBean.getProcessCpuLoad();
-
-            samples.add(new SystemSample(System.currentTimeMillis(), memoryUsed, cpuUsage));
-        }
-    }
-
-    /**
-     * Detects performance regressions by comparing with historical data.
-     */
-    private class RegressionDetector {
-        private List<BuildMetrics> history;
-
-        public void loadHistory(List<BuildMetrics> buildHistory) {
-            this.history = buildHistory;
-        }
-
-        public RegressionReport detectRegression(BuildMetrics currentBuild, double threshold) {
-            RegressionReport report = new RegressionReport();
-            report.currentTime = currentBuild.totalTime;
-            report.buildsAnalyzed = history.size();
-
-            if (history.size() < 3) {
-                report.trend = "Insufficient data";
-                return report;
-            }
-
-            // Calculate average of recent builds (excluding current)
-            List<BuildMetrics> recentHistory = history.subList(
-                    Math.max(0, history.size() - Math.min(10, history.size())),
-                    history.size() - 1);
-
-            double avgTime = recentHistory.stream().mapToLong(b -> b.totalTime).average().orElse(0);
-            report.averageTime = (long) avgTime;
-
-            if (avgTime > 0) {
-                report.regressionFactor = currentBuild.totalTime / avgTime;
-
-                if (report.regressionFactor >= threshold) {
-                    report.isRegression = true;
-                } else if (report.regressionFactor <= (1.0 / threshold)) {
-                    report.isImprovement = true;
-                }
-            }
-
-            // Determine trend
-            if (recentHistory.size() >= 3) {
-                List<Long> recentTimes = recentHistory.stream()
-                        .map(b -> b.totalTime)
-                        .collect(Collectors.toList());
-
-                boolean increasing = true, decreasing = true;
-                for (int i = 1; i < recentTimes.size(); i++) {
-                    if (recentTimes.get(i) <= recentTimes.get(i - 1))
-                        increasing = false;
-                    if (recentTimes.get(i) >= recentTimes.get(i - 1))
-                        decreasing = false;
-                }
-
-                if (increasing)
-                    report.trend = "Consistently slower";
-                else if (decreasing)
-                    report.trend = "Consistently faster";
-                else
-                    report.trend = "Variable";
-            }
-
-            return report;
-        }
-    }
-
-    /**
-     * Calculates build efficiency score based on multiple factors.
-     */
-    private class EfficiencyScorer {
-        public EfficiencyScore calculateScore(BuildMetrics current, List<BuildMetrics> history) {
-            EfficiencyScore score = new EfficiencyScore();
-
-            // Time efficiency (30 points) - based on build duration
-            score.timeScore = calculateTimeScore(current, history);
-
-            // Memory efficiency (25 points) - based on memory usage
-            score.memoryScore = calculateMemoryScore(current);
-
-            // CPU efficiency (25 points) - based on CPU utilization
-            score.cpuScore = calculateCpuScore(current);
-
-            // Consistency (20 points) - based on build time variance
-            score.consistencyScore = calculateConsistencyScore(current, history);
-
-            score.score = score.timeScore + score.memoryScore + score.cpuScore + score.consistencyScore;
-
-            // Generate suggestions
-            if (score.timeScore < 20) {
-                score.suggestions.add("Optimize slow phases to improve time efficiency");
-            }
-            if (score.memoryScore < 15) {
-                score.suggestions.add("Reduce memory usage through better heap management");
-            }
-            if (score.cpuScore < 15) {
-                score.suggestions.add("Improve CPU utilization with parallel execution");
-            }
-            if (score.consistencyScore < 10) {
-                score.suggestions.add("Improve build consistency by addressing variable performance");
-            }
-
-            return score;
-        }
-
-        private double calculateTimeScore(BuildMetrics current, List<BuildMetrics> history) {
-            if (history.size() < 2)
-                return 25.0; // Default score for insufficient data
-
-            double avgTime = history.stream().mapToLong(b -> b.totalTime).average().orElse(current.totalTime);
-            double ratio = avgTime / current.totalTime;
-
-            // Score: 30 points max, decreasing as build gets slower than average
-            return Math.min(30.0, Math.max(0.0, ratio * 30.0));
-        }
-
-        private double calculateMemoryScore(BuildMetrics current) {
-            long memoryMB = current.systemMetrics.peakMemoryUsage / (1024 * 1024);
-
-            // Score based on memory usage ranges
-            if (memoryMB < 512)
-                return 25.0; // < 512MB = excellent
-            if (memoryMB < 1024)
-                return 20.0; // < 1GB = good
-            if (memoryMB < 2048)
-                return 15.0; // < 2GB = fair
-            if (memoryMB < 4096)
-                return 10.0; // < 4GB = poor
-            return 5.0; // > 4GB = very poor
-        }
-
-        private double calculateCpuScore(BuildMetrics current) {
-            double cpuUsage = current.systemMetrics.avgCpuUsage;
-
-            // Optimal CPU usage is around 70-80%
-            if (cpuUsage >= 0.7 && cpuUsage <= 0.9)
-                return 25.0; // Optimal
-            if (cpuUsage >= 0.5 && cpuUsage <= 0.95)
-                return 20.0; // Good
-            if (cpuUsage >= 0.3 && cpuUsage <= 0.98)
-                return 15.0; // Fair
-            if (cpuUsage >= 0.1)
-                return 10.0; // Poor
-            return 5.0; // Very poor
-        }
-
-        private double calculateConsistencyScore(BuildMetrics current, List<BuildMetrics> history) {
-            if (history.size() < 3)
-                return 15.0; // Default score
-
-            List<Long> recentTimes = history.stream()
-                    .skip(Math.max(0, history.size() - 5))
-                    .mapToLong(b -> b.totalTime)
-                    .boxed()
-                    .collect(Collectors.toList());
-
-            double avg = recentTimes.stream().mapToLong(Long::longValue).average().orElse(0);
-            double variance = recentTimes.stream()
-                    .mapToDouble(time -> Math.pow(time - avg, 2))
-                    .average().orElse(0);
-
-            double coefficient = Math.sqrt(variance) / avg; // Coefficient of variation
-
-            // Lower variation = higher score
-            if (coefficient < 0.1)
-                return 20.0; // Very consistent
-            if (coefficient < 0.2)
-                return 15.0; // Consistent
-            if (coefficient < 0.3)
-                return 10.0; // Moderately consistent
-            if (coefficient < 0.5)
-                return 5.0; // Inconsistent
-            return 2.0; // Very inconsistent
-        }
-    }
 
     // ========== DATA CLASSES ==========
-
-    /**
-     * Comprehensive build metrics including system resource usage.
-     */
-    private static class BuildMetrics {
-        final LocalDateTime timestamp;
-        final long totalTime;
-        final Map<String, Long> phaseTimes;
-        final SystemMetrics systemMetrics;
-
-        public BuildMetrics(LocalDateTime timestamp, long totalTime,
-                Map<String, Long> phaseTimes, SystemMetrics systemMetrics) {
-            this.timestamp = timestamp;
-            this.totalTime = totalTime;
-            this.phaseTimes = phaseTimes;
-            this.systemMetrics = systemMetrics;
-        }
-    }
-
-    /**
-     * System resource metrics collected during build.
-     */
-    private static class SystemMetrics {
-        final long avgMemoryUsage;
-        final long peakMemoryUsage;
-        final double avgCpuUsage;
-        final double peakCpuUsage;
-        final long gcCount;
-        final long gcTime;
-
-        public SystemMetrics() {
-            this(0, 0, 0, 0, 0, 0);
-        }
-
-        public SystemMetrics(long avgMemoryUsage, long peakMemoryUsage,
-                double avgCpuUsage, double peakCpuUsage,
-                long gcCount, long gcTime) {
-            this.avgMemoryUsage = avgMemoryUsage;
-            this.peakMemoryUsage = peakMemoryUsage;
-            this.avgCpuUsage = avgCpuUsage;
-            this.peakCpuUsage = peakCpuUsage;
-            this.gcCount = gcCount;
-            this.gcTime = gcTime;
-        }
-    }
-
-    /**
-     * Sample point for system monitoring.
-     */
-    private static class SystemSample {
-        final long timestamp;
-        final long memoryUsed;
-        final double cpuUsage;
-
-        public SystemSample(long timestamp, long memoryUsed, double cpuUsage) {
-            this.timestamp = timestamp;
-            this.memoryUsed = memoryUsed;
-            this.cpuUsage = cpuUsage;
-        }
-    }
-
-    /**
-     * Report containing bottleneck analysis results.
-     */
-    private static class BottleneckReport {
-        String primaryBottleneck = "";
-        long primaryBottleneckTime = 0;
-        double primaryBottleneckPercentage = 0;
-        List<PhaseAnalysis> topPhases = new ArrayList<>();
-        List<String> recommendations = new ArrayList<>();
-
-        static class PhaseAnalysis {
-            final String phaseName;
-            final long duration;
-            final double percentage;
-
-            public PhaseAnalysis(String phaseName, long duration, double percentage) {
-                this.phaseName = phaseName;
-                this.duration = duration;
-                this.percentage = percentage;
-            }
-        }
-    }
-
-    /**
-     * Report containing regression analysis results.
-     */
-    private static class RegressionReport {
-        boolean isRegression = false;
-        boolean isImprovement = false;
-        double regressionFactor = 1.0;
-        long currentTime = 0;
-        long averageTime = 0;
-        String trend = "Stable";
-        int buildsAnalyzed = 0;
-    }
-
-    /**
-     * Build efficiency score with detailed breakdown.
-     */
-    private static class EfficiencyScore {
-        double score = 0;
-        double timeScore = 0;
-        double memoryScore = 0;
-        double cpuScore = 0;
-        double consistencyScore = 0;
-        List<String> suggestions = new ArrayList<>();
-
-        public String getLetterGrade() {
-            if (score >= 90)
-                return "A+";
-            if (score >= 85)
-                return "A";
-            if (score >= 80)
-                return "A-";
-            if (score >= 75)
-                return "B+";
-            if (score >= 70)
-                return "B";
-            if (score >= 65)
-                return "B-";
-            if (score >= 60)
-                return "C+";
-            if (score >= 55)
-                return "C";
-            if (score >= 50)
-                return "C-";
-            if (score >= 45)
-                return "D+";
-            if (score >= 40)
-                return "D";
-            return "F";
-        }
-
-        public String getScoreDescription() {
-            if (score >= 85)
-                return "Excellent - Highly optimized build";
-            if (score >= 70)
-                return "Good - Well-performing build";
-            if (score >= 55)
-                return "Average - Room for improvement";
-            if (score >= 40)
-                return "Below Average - Needs optimization";
-            return "Poor - Significant optimization required";
-        }
-    }
+    // External classes are used for data structures
 
     // ========== LEGACY METHODS FOR BACKWARD COMPATIBILITY ==========
 

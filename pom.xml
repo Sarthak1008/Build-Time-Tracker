@@ -7,7 +7,7 @@
 	<!-- Basic Project Information -->
 	<groupId>io.github.sarthak1008</groupId>
 	<artifactId>build-time-tracker</artifactId>
-	<version>1.0.8</version>
+	<version>1.1.0</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>Build Time Tracker</name>
@@ -72,6 +72,40 @@
 			<artifactId>maven-plugin-annotations</artifactId>
 			<version>3.6.4</version>
 			<scope>provided</scope>
+		</dependency>
+
+		<!-- PDF Generation with iText7 -->
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>kernel</artifactId>
+			<version>7.2.5</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>layout</artifactId>
+			<version>7.2.5</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>io</artifactId>
+			<version>7.2.5</version>
+		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>forms</artifactId>
+			<version>7.2.5</version>
+		</dependency>
+
+		<!-- Excel Generation -->
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi</artifactId>
+			<version>5.2.4</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.poi</groupId>
+			<artifactId>poi-ooxml</artifactId>
+			<version>5.2.4</version>
 		</dependency>
 
 		<!-- JUnit for testing -->

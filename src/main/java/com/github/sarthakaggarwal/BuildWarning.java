@@ -1,6 +1,6 @@
 package com.github.sarthakaggarwal;
 
-class BuildWarning {
+public class BuildWarning {
     public final String phase;
     public final String warningType;
     public final String warningMessage;
