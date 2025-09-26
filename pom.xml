@@ -7,7 +7,7 @@
 	<!-- Basic Project Information -->
 	<groupId>io.github.sarthak1008</groupId>
 	<artifactId>build-time-tracker</artifactId>
-	<version>1.0.5</version>
+	<version>1.0.8</version>
 	<packaging>maven-plugin</packaging>
 
 	<name>Build Time Tracker</name>

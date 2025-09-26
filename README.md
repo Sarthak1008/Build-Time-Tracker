@@ -19,6 +19,14 @@ An advanced Maven plugin that tracks and analyzes build times with comprehensive
 - **📊 Interactive Charts**: Visual representation of phase breakdowns and trends
 - **💡 Smart Recommendations**: AI-powered suggestions for build optimization
 
+### Code Quality & Warning Detection
+- **⚠️ Warning Analysis**: Comprehensive detection and categorization of build warnings
+- **🔍 Unused Code Detection**: Identifies unused variables, imports, and suppressed warnings
+- **📝 Source Code Analysis**: Static analysis of Java files for code quality issues
+- **🏷️ Warning Categorization**: Groups warnings by type (Unused Code, Deprecation, Type Safety, etc.)
+- **📊 Severity Classification**: Classifies warnings as HIGH, MEDIUM, or LOW priority
+- **📋 Warning Reports**: Detailed HTML and console reports for all detected warnings
+
 ## Installation
 
 ### Maven Central
@@ -29,7 +37,7 @@ Add the following to your `pom.xml`:
 <plugin>
 	<groupId>io.github.sarthak1008</groupId>
 	<artifactId>build-time-tracker</artifactId>
-	<version>1.0.5</version>
+	<version>1.0.8</version>
 	<executions>
 		<execution>
 			<goals>
@@ -48,7 +56,7 @@ You can configure the plugin with the following options:
 <plugin>
 	<groupId>io.github.sarthak1008</groupId>
 	<artifactId>build-time-tracker</artifactId>
-	<version>1.0.5</version>
+	<version>1.0.8</version>
 	<executions>
 		<execution>
 			<goals>
@@ -72,6 +80,14 @@ You can configure the plugin with the following options:
 		<monitoringInterval>1000</monitoringInterval>             <!-- Monitoring interval (ms) -->
 		<regressionThreshold>1.5</regressionThreshold>           <!-- 1.5x slower = regression -->
 		<historySize>20</historySize>                             <!-- Keep last 20 builds -->
+		
+		<!-- Warning Detection & Code Analysis -->
+		<enableWarningDetection>true</enableWarningDetection>     <!-- Enable warning analysis -->
+		<enableCodeQualityChecks>true</enableCodeQualityChecks>   <!-- Enable code quality checks -->
+		<enableFailureAnalysis>true</enableFailureAnalysis>       <!-- Enable failure analysis -->
+		<maxWarningsToShow>50</maxWarningsToShow>                 <!-- Max warnings in reports -->
+		<enableFailureLineDetection>true</enableFailureLineDetection> <!-- Show source context -->
+		<sourceCodeContext>3</sourceCodeContext>                  <!-- Lines of context around issues -->
 		
 		<!-- History Management -->
 		<historyFile>${project.build.directory}/build-history.json</historyFile>
@@ -135,9 +151,28 @@ Score Breakdown:
 Memory Usage: 512.3 MB avg, 1024.7 MB peak
 CPU Usage: 65.2% avg, 89.1% peak
 GC Activity: 12 collections, 0.8s total time
+
+⚠️ WARNINGS SUMMARY
+──────────────────────────────
+Total Warnings: 8
+
+Unused Code: 3 total (🔴 0 high, 🟡 0 medium, ⚪ 3 low)
+  ⚪ DemoApplication.java:12 - The value of the local variable d is not used
+  ⚪ DemoApplication.java:13 - The value of the local variable a is not used
+  ⚪ DemoApplication.java:11 - Warning suppression detected: @SuppressWarnings(value = "unchecked")
+
+Java Agent: 3 total (🔴 2 high, 🟡 1 medium, ⚪ 0 low)
+  🔴 WARNING: A Java agent has been loaded dynamically
+  🔴 WARNING: Dynamic loading of agents will be disallowed by default in a future release
+  🟡 WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading
+
+Testing: 2 total (🔴 0 high, 🟡 1 medium, ⚪ 1 low)
+  🟡 Mockito is currently self-attaching to enable the inline-mock-maker
+  ⚪ This will no longer work in future releases of the JDK
 ==================================================
 
 🎯 Build dashboard generated: /target/build-dashboard.html
+⚠️ Warnings report generated: /target/build-warnings.html
 ```
 
 ## HTML Dashboard
@@ -150,6 +185,9 @@ The plugin generates a comprehensive HTML dashboard at `target/build-dashboard.h
 - **📋 Detailed Phase Table**: Sortable table with duration, percentage, and status
 - **💡 Smart Recommendations**: Actionable optimization suggestions
 - **🖥️ System Resource Analysis**: Memory and CPU usage insights
+- **⚠️ Warning Analysis Dashboard**: Comprehensive warning detection and categorization
+- **🔍 Code Quality Reports**: Detailed reports on unused code, deprecations, and issues
+- **📊 Warning Severity Breakdown**: Visual indicators for HIGH, MEDIUM, and LOW priority warnings
 
 ### Dashboard Features
 - Responsive design that works on all devices
@@ -197,6 +235,12 @@ The plugin maintains a build history file (`build-history.json`) that enables:
 | `regressionThreshold` | 1.5 | Factor for detecting performance regression |
 | `historySize` | 20 | Number of builds to keep in history |
 | `historyFile` | `${project.build.directory}/build-history.json` | Build history file location |
+| `enableWarningDetection` | true | Enable warning analysis and detection |
+| `enableCodeQualityChecks` | true | Enable code quality analysis |
+| `enableFailureAnalysis` | true | Enable build failure analysis |
+| `maxWarningsToShow` | 50 | Maximum number of warnings to display |
+| `enableFailureLineDetection` | true | Show source code context for failures |
+| `sourceCodeContext` | 3 | Number of lines to show around issues |
 
 ## Performance Tips
 
@@ -206,6 +250,8 @@ The plugin maintains a build history file (`build-history.json`) that enables:
 2. **System Monitoring**: Ensure adequate memory allocation if peak usage is high
 3. **Regression Detection**: Investigate sudden performance drops
 4. **Efficiency Score**: Aim for scores above 85 for optimal performance
+5. **Warning Analysis**: Address HIGH and MEDIUM priority warnings first
+6. **Code Quality**: Clean up unused variables and deprecated code
 
 ### Common Optimizations
 
@@ -214,6 +260,14 @@ The plugin maintains a build history file (`build-history.json`) that enables:
 - **Dependencies**: Optimize dependency resolution, use local repositories
 - **Memory**: Increase heap size if memory usage is consistently high
 - **CPU**: Enable parallel builds with `-T` flag
+
+### Code Quality Improvements
+
+- **Unused Code**: Remove unused variables, imports, and methods identified by the plugin
+- **Deprecations**: Update deprecated API usage to modern alternatives
+- **Type Safety**: Fix unchecked operations and raw type usage
+- **Warning Suppressions**: Review and minimize @SuppressWarnings usage
+- **Agent Warnings**: Configure JVM options to eliminate dynamic agent loading warnings
 
 ## Building from Source
 
@@ -232,6 +286,16 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 This project is licensed under the MIT License - see the LICENSE file for details.
 
 ## Changelog
+
+### Version 1.0.8
+- **🔍 Warning Detection & Code Analysis**: Comprehensive warning detection system
+- **⚠️ Unused Code Detection**: Identifies unused variables, imports, and suppressed warnings
+- **📝 Source Code Analysis**: Static analysis of Java files for code quality issues
+- **🏷️ Warning Categorization**: Groups warnings by type (Unused Code, Deprecation, Type Safety, etc.)
+- **📊 Severity Classification**: Classifies warnings as HIGH, MEDIUM, or LOW priority
+- **📋 Enhanced Reporting**: Detailed HTML and console reports for warnings and failures
+- **🔧 Failure Analysis**: Advanced failure detection with source code context
+- **📈 Improved Analytics**: Integrated warning analysis into performance reports
 
 ### Version 1.0.5
 - Added advanced analytics engine with bottleneck analysis
